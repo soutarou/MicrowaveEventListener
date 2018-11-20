@@ -5,21 +5,33 @@ import numpy as np
 import soundfile as sf
 import pyaudio as pa
 
+import math
+
 import sys
 
 # 使うサウンドデバイス番号に合わせて変える
 # サウンドデバイス番号の確認はsoundDevice.pyで行う
-SOUND_INPUT_DEVICE = 0;
+SOUND_INPUT_DEVICE = 2;
 CHUNK_SIZE = 1024
-RMS_BUFFSIZE = CHUNK_SIZE*4
+QUEUE_SIZE = 8
+RMS_BUFFSIZE = CHUNK_SIZE*QUEUE_SIZE
 
 OUT = True
 
 # global
 xs = np.array([]) #サウンド出力用
 rmsDatas = np.array([]) #rms値のcsv出力用
-powerQueue = np.zeros(4) # chunkでの内積合計のキュー
+powerQueue = np.zeros(QUEUE_SIZE) # chunkでの内積合計のキュー
 sum_rms_power = 0 #RMS窓での内積の合計
+
+mwEventFlag = False
+mwCompleteFlag = False
+
+eventNotify = False
+notifyTime = 0
+
+def nowMili():
+    return int(time.time()*1000)
 
 def queue(data,input):
     dst = np.roll(data,-1)
@@ -29,6 +41,12 @@ def queue(data,input):
 def callback(in_data, frame_count, time_info, status):
     global powerQueue
     global sum_rms_power
+
+    global mwEventFlag
+    global mwCompleteFlag
+
+    global eventNotify
+    global notifyTime
 
     # short型のデータバッファをfloatに
     in_float = np.frombuffer(in_data, dtype=np.int16).astype(np.float)
@@ -50,11 +68,46 @@ def callback(in_data, frame_count, time_info, status):
     #RMS値を計算
     rms = np.sqrt(sum_rms_power/RMS_BUFFSIZE)
 
+    rmsDB = 20*math.log10(rms)
+    # print(rmsDB)
+
+    # if rms > 0.008:
+    #     print(rms," > 温め完了")
+
+    if not mwEventFlag:
+        if rmsDB >= -39:
+            # print("域値超え > ",rmsDB)
+            mwEventFlag = True
+            mwCompleteFlag = True
+    else:
+        if rmsDB >= -37:
+            # print("大きすぎ > ",rmsDB)
+            mwCompleteFlag = False
+        elif rmsDB <= -44:
+            if mwCompleteFlag:
+                nowTime = nowMili()
+                progress = nowTime - notifyTime
+                print(progress)
+                if progress > 2000: #前回の通知より2秒以上空いていたら通知を行う
+                    eventNotify = False
+
+                if not eventNotify:
+                    print(rmsDB," > 温め完了")
+                notifyTime = nowMili()
+                eventNotify = True
+
+            mwEventFlag = False
+            mwCompleteFlag = False
+
+    # if -39 >= rmsDB >= -41:
+    #     print(rmsDB," > 温め完了")
+
+
     if OUT:
         global xs
         global rmsDatas
         xs = np.r_[xs, in_float]
-        rmsDatas = np.r_[rmsDatas, rms]
+        rmsDatas = np.r_[rmsDatas, rmsDB]
 
     return (in_data, pa.paContinue)
 
@@ -69,7 +122,7 @@ if __name__ == "__main__":
 
     p_in = pa.PyAudio()
     py_format = p_in.get_format_from_width(2)
-    fs = 16000
+    fs = 44100
     channels = 1
 
     # 入力ストリームを作成
