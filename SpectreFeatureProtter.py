@@ -60,20 +60,20 @@ def main():
         sinFreq = np.r_[sinFreq,sinFreqMag]
 
     # PowerSpectreArea
-    plt.subplot(3,1,1)
-    plt.ylim([0.0,0.6])
-    plt.plot(t1,magnitude)
-    plt.ylabel('SpectrumArea', fontsize=10)
+    # plt.subplot(3,1,1)
+    # plt.ylim([0.0,0.6])
+    # plt.plot(t1,magnitude)
+    # plt.ylabel('SpectrumArea', fontsize=10)
     # 20kFreqPower
-    plt.subplot(3,1,2)
-    plt.ylim([0.0,0.01])
+    # plt.subplot(2,1,1)
+    plt.ylim([0.0,0.006])
     plt.plot(t2,sinFreq)
     plt.ylabel('Magnitude', fontsize=10)
     # 元信号
-    plt.subplot(3,1,3)
-    plt.ylim([-0.25,0.25])
-    plt.plot(t3,in_float)
-    plt.ylabel('Amplitude', fontsize=10)
+    # plt.subplot(2,1,2)
+    # plt.ylim([-0.25,0.25])
+    # plt.plot(t3,in_float)
+    # plt.ylabel('Amplitude', fontsize=10)
     plt.xlabel("Time[sec]", fontsize=10)
     plt.show()
 

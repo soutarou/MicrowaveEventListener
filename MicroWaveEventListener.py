@@ -1,13 +1,10 @@
 import time
-
 import numpy as np
-
 import soundfile as sf
 import pyaudio as pa
-
 import math
-
 import sys
+import paho.mqtt.client as mqtt
 
 # 使うサウンドデバイス番号に合わせて変える
 # サウンドデバイス番号の確認はsoundDevice.pyで行う
@@ -20,14 +17,19 @@ HAM_WIN = np.hamming(CHUNK_SIZE)
 FS = 44100
 CHANNELS = 1
 
+BROKER = "192.168.11.4"
+PORT = 1883
+TOPIC = "nmServer/notify"
+
 OUT = False
 DEBUG = False
 
-# global
 xs = np.array([]) #サウンド出力用
 rmsDatas = np.array([]) #rms値のcsv出力用
 powerQueue = np.zeros(QUEUE_SIZE) # chunkでの内積合計のキュー
 sum_rms_power = 0 #RMS窓での内積の合計
+
+mqttClient = mqtt.Client(protocol=mqtt.MQTTv311)
 
 mwEventFlag = False
 flagSetTime = 0
@@ -61,6 +63,7 @@ def eventHandle(sinFreqMag):
             lapse = nowMili() - flagSetTime
             print("lapse > ",lapse)
             if 200 < lapse < 400:
+                mqttClient.publish(TOPIC, "MICROWAVE/warmComplete/1")
                 print("報知音検知")
 
 def callback(in_data, frame_count, time_info, status):
@@ -108,6 +111,8 @@ if __name__ == "__main__":
             print(" > python MicroWaveEventListener.py microwave")
             exit()
 
+    mqttClient.connect(BROKER, port=PORT, keepalive=60)
+
     p_in = pa.PyAudio()
     py_format = p_in.get_format_from_width(2)
 
@@ -141,3 +146,4 @@ if __name__ == "__main__":
         # np.savetxt(csvPath, rmsDatas, delimiter=",")
 
     p_in.terminate()
+    mqttClient.disconnect()
