@@ -34,6 +34,7 @@ mqttClient = mqtt.Client(protocol=mqtt.MQTTv311)
 mwEventFlag = False
 flagSetTime = 0
 mwCompleteFlag = False
+completeTime = 0
 
 eventNotify = False
 notifyTime = 0
@@ -49,22 +50,31 @@ def queue(data,input):
 def eventHandle(sinFreqMag):
     global mwEventFlag
     global flagSetTime
+    global mwCompleteFlag
+    global completeTime
     threshold = 0.0007
 
+    now = nowMili()
     # print(sinFreqMag)
+    if now - completeTime > 1000:
+        mwCompleteFlag = False
 
     if not mwEventFlag:
         if sinFreqMag >= threshold:
             mwEventFlag = True
-            flagSetTime = nowMili()
+            flagSetTime = now
     else:
         if sinFreqMag < threshold:
             mwEventFlag = False
-            lapse = nowMili() - flagSetTime
+            lapse = now - flagSetTime
             print("lapse > ",lapse)
             if 200 < lapse < 400:
-                mqttClient.publish(TOPIC, "MICROWAVE/warmComplete/1")
-                print("報知音検知")
+                if not mwCompleteFlag:
+                    print("報知音検知")
+                    mqttClient.publish(TOPIC, "MICROWAVE/warmComplete/1")
+                    mwCompleteFlag = True
+                completeTime = now
+
 
 def callback(in_data, frame_count, time_info, status):
 
