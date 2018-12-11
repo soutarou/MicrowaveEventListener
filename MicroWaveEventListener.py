@@ -15,8 +15,13 @@ SOUND_INPUT_DEVICE = 2;
 CHUNK_SIZE = 1024
 QUEUE_SIZE = 8
 RMS_BUFFSIZE = CHUNK_SIZE*QUEUE_SIZE
+HAM_WIN = np.hamming(CHUNK_SIZE)
 
-OUT = True
+FS = 44100
+CHANNELS = 1
+
+OUT = False
+DEBUG = False
 
 # global
 xs = np.array([]) #サウンド出力用
@@ -25,6 +30,7 @@ powerQueue = np.zeros(QUEUE_SIZE) # chunkでの内積合計のキュー
 sum_rms_power = 0 #RMS窓での内積の合計
 
 mwEventFlag = False
+flagSetTime = 0
 mwCompleteFlag = False
 
 eventNotify = False
@@ -38,15 +44,26 @@ def queue(data,input):
     dst[-1] = input
     return dst
 
-def callback(in_data, frame_count, time_info, status):
-    global powerQueue
-    global sum_rms_power
-
+def eventHandle(sinFreqMag):
     global mwEventFlag
-    global mwCompleteFlag
+    global flagSetTime
+    threshold = 0.0007
 
-    global eventNotify
-    global notifyTime
+    # print(sinFreqMag)
+
+    if not mwEventFlag:
+        if sinFreqMag >= threshold:
+            mwEventFlag = True
+            flagSetTime = nowMili()
+    else:
+        if sinFreqMag < threshold:
+            mwEventFlag = False
+            lapse = nowMili() - flagSetTime
+            print("lapse > ",lapse)
+            if 200 < lapse < 400:
+                print("報知音検知")
+
+def callback(in_data, frame_count, time_info, status):
 
     # short型のデータバッファをfloatに
     in_float = np.frombuffer(in_data, dtype=np.int16).astype(np.float)
@@ -54,53 +71,24 @@ def callback(in_data, frame_count, time_info, status):
     in_float[in_float > 0.0] /= float(2**15 - 1)
     in_float[in_float <= 0.0] /= float(2**15)
 
-    #chunk内の内積を計算
-    power = in_float*in_float
-    sum_power = power.sum()
+    fSp = np.fft.fft(HAM_WIN*in_float,n=None)
+    ampSp = np.abs(fSp/(CHUNK_SIZE/2))
+    ampSum = ampSp[:int(CHUNK_SIZE/2)].sum()
 
-    #RMS窓内の内積を計算
-    sum_rms_power += sum_power
-    sum_rms_power -= powerQueue[0]
+    # 2kHz付近の強さ
+    sinBaseFreq = int(2000/(FS/CHUNK_SIZE))
+    sinFreqMag = 0
 
-    #chunkの内積をキューに追加し、先頭の要素を削除
-    powerQueue = queue(powerQueue,sum_power)
+    if ampSum < 0.055:
+        roop = 5
+        for i in range(roop):
+            sinFreqMag += ampSp[int(sinBaseFreq + i - roop/2)]
 
-    #RMS値を計算
-    rms = np.sqrt(sum_rms_power/RMS_BUFFSIZE)
+    if DEBUG:
+        print("スペクトログラム面積 > ",ampSum)
+        print(sinFreqMag)
 
-    rmsDB = 20*math.log10(rms)
-    # print(rmsDB)
-
-    # if rms > 0.008:
-    #     print(rms," > 温め完了")
-
-    if not mwEventFlag:
-        if rmsDB >= -39:
-            # print("域値超え > ",rmsDB)
-            mwEventFlag = True
-            mwCompleteFlag = True
-    else:
-        if rmsDB >= -37:
-            # print("大きすぎ > ",rmsDB)
-            mwCompleteFlag = False
-        elif rmsDB <= -44:
-            if mwCompleteFlag:
-                nowTime = nowMili()
-                progress = nowTime - notifyTime
-                print(progress)
-                if progress > 2000: #前回の通知より2秒以上空いていたら通知を行う
-                    eventNotify = False
-
-                if not eventNotify:
-                    print(rmsDB," > 温め完了")
-                notifyTime = nowMili()
-                eventNotify = True
-
-            mwEventFlag = False
-            mwCompleteFlag = False
-
-    # if -39 >= rmsDB >= -41:
-    #     print(rmsDB," > 温め完了")
+    eventHandle(sinFreqMag)
 
 
     if OUT:
@@ -122,13 +110,11 @@ if __name__ == "__main__":
 
     p_in = pa.PyAudio()
     py_format = p_in.get_format_from_width(2)
-    fs = 44100
-    channels = 1
 
     # 入力ストリームを作成
     in_stream = p_in.open(format=py_format,
-                          channels=channels,
-                          rate=fs,
+                          channels=CHANNELS,
+                          rate=FS,
                           input=True,
                           frames_per_buffer=CHUNK_SIZE,
                           input_device_index=SOUND_INPUT_DEVICE,
@@ -150,8 +136,8 @@ if __name__ == "__main__":
     if OUT:
         # 入力信号を保存
         wavPath = "./data/" + args[1] + "_sound.wav"
-        csvPath = "./data/" + args[1] + "_rms.csv"
-        sf.write(wavPath, xs, fs)
-        np.savetxt(csvPath, rmsDatas, delimiter=",")
+        sf.write(wavPath, xs, FS)
+        # csvPath = "./data/" + args[1] + "_data.csv"
+        # np.savetxt(csvPath, rmsDatas, delimiter=",")
 
     p_in.terminate()
