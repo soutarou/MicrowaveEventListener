@@ -42,7 +42,7 @@ python MicroWaveEventListener.py <出力ファイル名>
 - data
   - 出力ファイルを保存するディレクトリ
 - **MicroWaveEventListener.py**
-  - 報知音を検知するメインプログラム．詳細は下記参照
+  - 報知音を検知するメインプログラム.
 - soundDevice.py
   - 接続サウンドデバイスの確認
 - RMSPlotter.py
