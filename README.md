@@ -25,7 +25,7 @@
 ```
 python soundDevice.py
 ```
-2. **MicroWaveEventListener.py**の**BROKER**をMQTTBrokerが立っているアドレスに指定(本研究では[mosquitto](https://mosquitto.org/)を使用してLAN内でBrokerを立てて実行している)
+2. **MicroWaveEventListener.py**の**BROKER**をMQTTBrokerが立っているアドレスに指定(本研究では[mosquitto][mosquitto]を使用してLAN内でBrokerを立てて実行している)
 3. 以下のコマンドで実行
 ```
 python MicroWaveEventListener.py
@@ -53,3 +53,11 @@ python MicroWaveEventListener.py <出力ファイル名>
   - 渡したファイルの波形とスペクトラムを表示するプログラム．画面下に表示される信号波形の好きなところをクリックするとその時間地点におけるスペクトラムを上に表示する．窓幅1024のハミング窓，サンプリングレートは44.1kHzで固定しているので，それ以外のパラメータのサウンドファイルに使う場合は中身を変えること．
 - WavePlotter.py
   - 渡したファイルの信号波形をプロットするプログラム
+
+## 参考にしたページ
+- [Pythonで音響信号処理][ref1]
+
+<!-- ref link -->
+[mosquitto]:https://mosquitto.org/ "mosquitto"
+
+[ref1]:https://qiita.com/wrist/items/5759f894303e4364ebfd "Pythonで音響信号処理"
