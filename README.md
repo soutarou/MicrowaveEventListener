@@ -1,6 +1,6 @@
 # MicrowaveEventListener
 
-京都産業大学実験住宅における電子レンジ(Panasonic NE-S26E6)の報知音を検知するためのシステム
+電子レンジ(Panasonic NE-S26E6)の報知音を検知するためのシステム．他の型での電子レンジでは対応不可．
 
 ## 実行環境
 - 言語

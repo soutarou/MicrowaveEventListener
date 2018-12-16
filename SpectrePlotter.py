@@ -38,7 +38,7 @@ def plot(x):
     ampSp = getAmpSpectrum(start)
 
     #スペクトログラム
-    ax.set_ylim(0.0,0.003)
+    ax.set_ylim(0.0,0.004)
     # plt.ylim([-160,0])
     # plt.xlim([0,FS/2])
     if im1 == None:
