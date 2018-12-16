@@ -10,8 +10,6 @@ import paho.mqtt.client as mqtt
 # サウンドデバイス番号の確認はsoundDevice.pyで行う
 SOUND_INPUT_DEVICE = 2;
 CHUNK_SIZE = 1024
-QUEUE_SIZE = 8
-RMS_BUFFSIZE = CHUNK_SIZE*QUEUE_SIZE
 HAM_WIN = np.hamming(CHUNK_SIZE)
 
 FS = 44100
@@ -26,8 +24,6 @@ DEBUG = False
 
 xs = np.array([]) #サウンド出力用
 rmsDatas = np.array([]) #rms値のcsv出力用
-powerQueue = np.zeros(QUEUE_SIZE) # chunkでの内積合計のキュー
-sum_rms_power = 0 #RMS窓での内積の合計
 
 mqttClient = mqtt.Client(protocol=mqtt.MQTTv311)
 
