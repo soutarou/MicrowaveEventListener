@@ -9,6 +9,7 @@ import paho.mqtt.client as mqtt
 # 使うサウンドデバイス番号に合わせて変える
 # サウンドデバイス番号の確認はsoundDevice.pyで行う
 SOUND_INPUT_DEVICE = 2;
+# SOUND_INPUT_DEVICE = 0;
 CHUNK_SIZE = 1024
 HAM_WIN = np.hamming(CHUNK_SIZE)
 
@@ -19,8 +20,9 @@ BROKER = "192.168.11.4"
 PORT = 1883
 TOPIC = "nmServer/notify"
 
-OUT = False
+OUT = True
 DEBUG = False
+CONNECT = False
 
 xs = np.array([]) #サウンド出力用
 rmsDatas = np.array([]) #rms値のcsv出力用
@@ -67,7 +69,8 @@ def eventHandle(sinFreqMag):
             if 200 < lapse < 400:
                 if not mwCompleteFlag:
                     print("報知音検知")
-                    mqttClient.publish(TOPIC, "MICROWAVE/warmComplete/1")
+                    if CONNECT:
+                        mqttClient.publish(TOPIC, "MICROWAVE/warmComplete/1")
                     mwCompleteFlag = True
                 completeTime = now
 
@@ -104,7 +107,6 @@ def callback(in_data, frame_count, time_info, status):
         global xs
         global rmsDatas
         xs = np.r_[xs, in_float]
-        rmsDatas = np.r_[rmsDatas, rmsDB]
 
     return (in_data, pa.paContinue)
 
@@ -117,7 +119,8 @@ if __name__ == "__main__":
             print(" > python MicroWaveEventListener.py microwave")
             exit()
 
-    mqttClient.connect(BROKER, port=PORT, keepalive=60)
+    if CONNECT:
+        mqttClient.connect(BROKER, port=PORT, keepalive=60)
 
     p_in = pa.PyAudio()
     py_format = p_in.get_format_from_width(2)
@@ -147,9 +150,7 @@ if __name__ == "__main__":
     if OUT:
         # 入力信号を保存
         wavPath = "./data/" + args[1] + "_sound.wav"
-        sf.write(wavPath, xs, FS)
-        # csvPath = "./data/" + args[1] + "_data.csv"
-        # np.savetxt(csvPath, rmsDatas, delimiter=",")
+        sf.write(wavPath, xs, FS)¥
 
     p_in.terminate()
     mqttClient.disconnect()
